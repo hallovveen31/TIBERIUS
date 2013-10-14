@@ -120,10 +120,12 @@ static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
 
 static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
 {
-	u64 idle_time = get_cpu_idle_time_us(cpu, wall);
+	u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
 
 	if (idle_time == -1ULL)
 		return get_cpu_idle_time_jiffy(cpu, wall);
+	else
+		idle_time += get_cpu_iowait_time_us(cpu, wall);
 
 	return idle_time;
 }
@@ -314,7 +316,7 @@ static struct attribute *dbs_attributes[] = {
 
 static struct attribute_group dbs_attr_group = {
 	.attrs = dbs_attributes,
-	.name = "conservative",
+	.name = "Conservative",
 };
 
 /************************** sysfs end ************************/
@@ -504,6 +506,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 						kstat_cpu(j).cpustat.nice;
 			}
 		}
+		this_dbs_info->cpu = cpu;
 		this_dbs_info->down_skip = 0;
 		this_dbs_info->requested_freq = policy->cur;
 
@@ -594,7 +597,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 static
 #endif
 struct cpufreq_governor cpufreq_gov_conservative = {
-	.name			= "conservative",
+	.name			= "Conservative",
 	.governor		= cpufreq_governor_dbs,
 	.max_transition_latency	= TRANSITION_LATENCY_LIMIT,
 	.owner			= THIS_MODULE,
